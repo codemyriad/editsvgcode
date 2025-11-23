@@ -15,7 +15,7 @@ import './main.css'
 import Split from 'split.js';
 
 import { getXmlCompletionProvider, getXmlHoverProvider } from './completion-provider';
-import { EditSvgCodeDb }  from './firebase';
+import { EditSvgCodeDb } from './firebase';
 
 Split(['#editor', '#output'], {
   gutterSize: 5
@@ -40,31 +40,31 @@ function formatXml(xml) {
   xml = xml.replace(reg, '$1\r\n$2$3');
 
   return xml.split('\r\n').map((node, index) => {
-      let indent = 0;
-      if (node.match(/.+<\/\w[^>]*>$/)) {
-          indent = 0;
-      } else if (node.match(/^<\/\w/) && pad > 0) {
-          pad -= 1;
-      } else if (node.match(/^<\w[^>]*[^/]>.*$/)) {
-          indent = 1;
-      } else {
-          indent = 0;
-      }
+    let indent = 0;
+    if (node.match(/.+<\/\w[^>]*>$/)) {
+      indent = 0;
+    } else if (node.match(/^<\/\w/) && pad > 0) {
+      pad -= 1;
+    } else if (node.match(/^<\w[^>]*[^/]>.*$/)) {
+      indent = 1;
+    } else {
+      indent = 0;
+    }
 
-      pad += indent;
+    pad += indent;
 
-      return PADDING.repeat(pad - indent) + node;
+    return PADDING.repeat(pad - indent) + node;
   }).join('\r\n');
 }
 
 monaco.languages.registerDocumentFormattingEditProvider('xml', {
   async provideDocumentFormattingEdits(model, options, token) {
-      return [
-          {
-              range: model.getFullModelRange(),
-              text: formatXml(model.getValue()),
-          },
-      ];
+    return [
+      {
+        range: model.getFullModelRange(),
+        text: formatXml(model.getValue()),
+      },
+    ];
   },
 });
 
@@ -96,7 +96,14 @@ btnSave.addEventListener('click', function () {
   let text = editor.getValue();
 
   btnSave.disabled = true;
-  db.saveDocument(uniqueId, text)
+
+  // TODO: Collect actual metadata from UI or other sources
+  let metadata = {
+    savedBy: 'editsvgcode',
+    version: '1.0'
+  };
+
+  db.saveDocument(uniqueId, text, metadata)
     .then(function () {
       history.pushState({}, "Saved", "/" + uniqueId);
     })

@@ -33,10 +33,10 @@ export function EditSvgCodeDb() {
   });
 }
 
-EditSvgCodeDb.prototype.loadDocument = function(uniqueId) {
+EditSvgCodeDb.prototype.loadDocument = function (uniqueId) {
 
   let ref = this.db.collection("files").doc(uniqueId);
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
 
     ref.get().then(function (ref) {
       if (ref.exists) {
@@ -53,21 +53,27 @@ EditSvgCodeDb.prototype.loadDocument = function(uniqueId) {
   })
 }
 
-EditSvgCodeDb.prototype.saveDocument = function(uniqueId, text) {
+EditSvgCodeDb.prototype.saveDocument = function (uniqueId, text, metadata) {
 
   let ref = this.db.collection("files").doc(uniqueId);
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
 
-    ref.set({
+    let data = {
       text: text,
       modified: new Date()
-    })
-    .then(function (ref) {
-      resolve(ref);
-    })
-    .catch(function (error) {
-      console.error("Error adding document: ", error);
-      reject(error);
-    })
+    };
+
+    if (metadata) {
+      data.metadata = metadata;
+    }
+
+    ref.set(data)
+      .then(function (ref) {
+        resolve(ref);
+      })
+      .catch(function (error) {
+        console.error("Error adding document: ", error);
+        reject(error);
+      })
   });
 }
