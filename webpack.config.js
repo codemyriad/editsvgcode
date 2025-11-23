@@ -9,14 +9,18 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'app.js'
   },
+  devServer: {
+    static: './dist',
+    historyApiFallback: true,
+  },
   module: {
     rules: [{
-        test: /\.css$/,
-        use: [MiniCssExtractPlugin.loader, 'css-loader']
-      }, {
-        test: /\.ttf$/,
-        type: 'asset/resource'
-      }]
+      test: /\.css$/,
+      use: [MiniCssExtractPlugin.loader, 'css-loader']
+    }, {
+      test: /\.ttf$/,
+      type: 'asset/resource'
+    }]
   },
   plugins: [
     new MonacoWebpackPlugin(),

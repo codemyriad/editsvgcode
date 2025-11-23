@@ -31,37 +31,37 @@ function getLastOpenedTag(text) {
   // get all tags inside of the content
   var tags = text.match(/<\/*(?=\S*)([a-zA-Z-]+)/g);
   if (!tags) {
-      return undefined;
+    return undefined;
   }
   // we need to know which tags are closed
   var closingTags = [];
   for (var i = tags.length - 1; i >= 0; i--) {
-      if (tags[i].indexOf('</') === 0) {
-          closingTags.push(tags[i].substring('</'.length));
+    if (tags[i].indexOf('</') === 0) {
+      closingTags.push(tags[i].substring('</'.length));
+    }
+    else {
+      // get the last position of the tag
+      var tagPosition = text.lastIndexOf(tags[i]);
+      var tag = tags[i].substring('<'.length);
+      var closingBracketIdx = text.indexOf('/>', tagPosition);
+      // if the tag wasn't closed
+      if (closingBracketIdx === -1) {
+        // if there are no closing tags or the current tag wasn't closed
+        if (!closingTags.length || closingTags[closingTags.length - 1] !== tag) {
+          // we found our tag, but let's get the information if we are looking for
+          // a child element or an attribute
+          text = text.substring(tagPosition);
+          return {
+            tagName: tag,
+            isAttributeSearch: text.indexOf('<') > text.indexOf('>')
+          };
+        }
+        // remove the last closed tag
+        closingTags.splice(closingTags.length - 1, 1);
       }
-      else {
-          // get the last position of the tag
-          var tagPosition = text.lastIndexOf(tags[i]);
-          var tag = tags[i].substring('<'.length);
-          var closingBracketIdx = text.indexOf('/>', tagPosition);
-          // if the tag wasn't closed
-          if (closingBracketIdx === -1) {
-              // if there are no closing tags or the current tag wasn't closed
-              if (!closingTags.length || closingTags[closingTags.length - 1] !== tag) {
-                  // we found our tag, but let's get the information if we are looking for
-                  // a child element or an attribute
-                  text = text.substring(tagPosition);
-                  return {
-                      tagName: tag,
-                      isAttributeSearch: text.indexOf('<') > text.indexOf('>')
-                  };
-              }
-              // remove the last closed tag
-              closingTags.splice(closingTags.length - 1, 1);
-          }
-          // remove the last checked tag and continue processing the rest of the content
-          text = text.substring(0, tagPosition);
-      }
+      // remove the last checked tag and continue processing the rest of the content
+      text = text.substring(0, tagPosition);
+    }
   }
 }
 
@@ -70,14 +70,14 @@ function isItemAvailable(itemName, maxOccurs, items) {
   maxOccurs = maxOccurs || '1';
   // the element can appear infinite times, so it is available
   if (maxOccurs && maxOccurs === 'unbounded') {
-      return true;
+    return true;
   }
   // count how many times the element appeared
   var count = 0;
   for (var i = 0; i < items.length; i++) {
-      if (items[i] === itemName) {
-          count++;
-      }
+    if (items[i] === itemName) {
+      count++;
+    }
   }
   // if it didn't appear yet, or it can appear again, then it
   // is available, otherwise it't not
@@ -87,18 +87,18 @@ function isItemAvailable(itemName, maxOccurs, items) {
 function findAttributes(elements) {
   var attrs = [];
   for (var i = 0; i < elements.length; i++) {
-      // skip level if it is a 'complexType' tag
-      if (elements[i].tagName === 'complexType') {
-          var child = findAttributes(elements[i].children);
-          if (child) {
-              return child;
-          }
+    // skip level if it is a 'complexType' tag
+    if (elements[i].tagName === 'complexType') {
+      var child = findAttributes(elements[i].children);
+      if (child) {
+        return child;
       }
-      // we need only those XSD elements that have a
-      // tag 'attribute'
-      else if (elements[i].tagName === 'attribute') {
-          attrs.push(elements[i]);
-      }
+    }
+    // we need only those XSD elements that have a
+    // tag 'attribute'
+    else if (elements[i].tagName === 'attribute') {
+      attrs.push(elements[i]);
+    }
   }
   return attrs;
 }
@@ -111,26 +111,26 @@ function getAvailableAttribute(monaco, lastOpenedTag, usedChildTags) {
   // if there are no attributes, then there are no
   // suggestions available
   if (!info || !info.attributes) {
-      return [];
+    return [];
   }
   for (var i = 0; i < info.attributes.length; i++) {
-      // get all attributes for the element
-      var attribute = info.attributes[i];
-      // accept it in a suggestion list only if it is available
-      if (isItemAvailable(attribute.name, attribute.maxOccurs, usedChildTags)) {
-          // mark it as a 'property', and get the documentation
-          availableItems.push({
-              label: attribute.name,
-              insertText: `${attribute.name}="$\{1\}"`,
-              kind: monaco.languages.CompletionItemKind.Property,
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              detail: attribute.detail,
-              documentation: {
-                  value: attribute.description || "",
-                  isTrusted: true
-              }
-          });
-      }
+    // get all attributes for the element
+    var attribute = info.attributes[i];
+    // accept it in a suggestion list only if it is available
+    if (isItemAvailable(attribute.name, attribute.maxOccurs, usedChildTags)) {
+      // mark it as a 'property', and get the documentation
+      availableItems.push({
+        label: attribute.name,
+        insertText: `${attribute.name}="$\{1\}"`,
+        kind: monaco.languages.CompletionItemKind.Property,
+        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        detail: attribute.detail,
+        documentation: {
+          value: attribute.description || "",
+          isTrusted: true
+        }
+      });
+    }
   }
   // return the elements we found
   return availableItems;
@@ -143,22 +143,22 @@ function getAvailableElements(monaco, lastOpenedTag, usedItems) {
 
   // if there are no such elements, then there are no suggestions
   if (!info || !info.elements) {
-      return [];
+    return [];
   }
 
   for (var i = 0; i < info.elements.length; i++) {
     var element = info.elements[i];
     var elementInfo = SvgSchema[element];
     availableItems.push({
-        label: element,
-        insertText: `${element}>$\{1\}</${element}`,
-        kind: monaco.languages.CompletionItemKind.Class,
-        detail: elementInfo.detail,
-        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-        documentation: {
-            value: elementInfo.description || "",
-            isTrusted: true
-        }
+      label: element,
+      insertText: `${element}>$\{1\}</${element}`,
+      kind: monaco.languages.CompletionItemKind.Class,
+      detail: elementInfo.detail,
+      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      documentation: {
+        value: elementInfo.description || "",
+        isTrusted: true
+      }
     });
   }
 
@@ -182,7 +182,7 @@ export function getXmlCompletionProvider(monaco) {
       let areaInfo = getAreaInfo(textUntilPosition); // isCompletionAvailable, clearedText
       // if we don't want any suggestions, return empty array
       if (!areaInfo.isCompletionAvailable) {
-        return [];
+        return { suggestions: [] };
       }
       // if we want suggestions, inside of which tag are we?
       var lastOpenedTag = getLastOpenedTag(areaInfo.clearedText);
@@ -207,7 +207,7 @@ export function getXmlCompletionProvider(monaco) {
             // be the attributes we already used
             if (lastOpenedTag.isAttributeSearch) {
               var attrs = lastChild.attributes;
-              for (var i = 0; i< attrs.length; i++) {
+              for (var i = 0; i < attrs.length; i++) {
                 usedItems.push(attrs[i].nodeName);
               }
             }
@@ -232,28 +232,29 @@ export function getXmlCompletionProvider(monaco) {
           ? getAvailableAttribute(monaco, lastOpenedTag, usedItems)
           : getAvailableElements(monaco, lastOpenedTag, usedItems)
         : [];
-      
+
       console.log(suggestions);
 
       return {
-        suggestions: suggestions };
+        suggestions: suggestions
+      };
     }
   };
 }
 
 export function getXmlHoverProvider(monaco) {
   return {
-    provideHover: function(model, position, token) {
+    provideHover: function (model, position, token) {
       let wordInfo = model.getWordAtPosition(position);
       if (!wordInfo)
         return;
-        
+
       let line = model.getLineContent(position.lineNumber);
-      if (line.substr(wordInfo.startColumn-2, 1) == '<') {
+      if (line.substr(wordInfo.startColumn - 2, 1) == '<') {
         let info = SvgSchema[wordInfo.word];
         if (info) {
           return {
-            contents: [ 
+            contents: [
               { value: `**${wordInfo.word}**` },
               { value: info.description }
             ],
@@ -267,17 +268,17 @@ export function getXmlHoverProvider(monaco) {
           var lastOpenedTag = getLastOpenedTag(areaInfo.clearedText);
           let info = SvgSchema[lastOpenedTag.tagName];
           if (info && info.attributes) {
-          for (var i = 0; i < info.attributes.length; i++) {
+            for (var i = 0; i < info.attributes.length; i++) {
               // get all attributes for the element
               var attribute = info.attributes[i];
               if (attribute.name === wordInfo.word) {
                 return {
-                  contents: [ 
+                  contents: [
                     { value: `**${wordInfo.word}**` },
                     { value: attribute.description }
                   ],
                   range: new monaco.Range(position.lineNumber, wordInfo.startColumn, position.lineNumber, wordInfo.endColumn),
-                }                
+                }
               }
             }
           }
