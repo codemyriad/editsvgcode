@@ -72,8 +72,131 @@ monaco.languages.registerDocumentFormattingEditProvider('xml', {
 monaco.languages.registerCompletionItemProvider('xml', getXmlCompletionProvider(monaco));
 monaco.languages.registerHoverProvider('xml', getXmlHoverProvider(monaco));
 
+import { parseVariables, substituteVariables } from './variables';
+
+let activeVariables = [];
+
+function renderSvg() {
+  const xml = editor.getValue();
+  const processedXml = substituteVariables(xml, activeVariables);
+  document.getElementById('svg-container').innerHTML = processedXml;
+}
+
+function triggerAttackDecay(v) {
+  const start = Date.now();
+  const attack = v.attack * 1000;
+  const decay = v.decay * 1000;
+  const min = v.min;
+  const max = v.max;
+
+  function animate() {
+    const now = Date.now();
+    const elapsed = now - start;
+
+    if (elapsed < attack) {
+      // Attack phase: min -> max
+      const t = elapsed / attack;
+      v.currentValue = min + (max - min) * t;
+    } else if (elapsed < attack + decay) {
+      // Decay phase: max -> min
+      const t = (elapsed - attack) / decay;
+      v.currentValue = max - (max - min) * t;
+    } else {
+      v.currentValue = min;
+      renderSvg();
+      return;
+    }
+    renderSvg();
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function updateControls() {
+  const container = document.getElementById('controls-container');
+  container.innerHTML = '';
+
+  if (activeVariables.length === 0) {
+    container.innerHTML = '<div class="alert alert-secondary m-3">No variables defined. Add &lt;editsvg:variable name="..." ... /&gt; to the SVG.</div>';
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'row g-3'; // Bootstrap row with gap
+  container.appendChild(row);
+
+  activeVariables.forEach(v => {
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4'; // Responsive columns
+    row.appendChild(col);
+
+    const card = document.createElement('div');
+    card.className = 'card bg-dark text-light border-secondary h-100';
+    col.appendChild(card);
+
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body d-flex flex-column justify-content-center';
+    card.appendChild(cardBody);
+
+    const labelRow = document.createElement('div');
+    labelRow.className = 'd-flex justify-content-between align-items-center mb-2';
+    cardBody.appendChild(labelRow);
+
+    const label = document.createElement('label');
+    label.className = 'form-label fw-bold mb-0';
+    label.innerText = v.label || v.name;
+    labelRow.appendChild(label);
+
+    if (v.type === 'slider') {
+      const valDisplay = document.createElement('span');
+      valDisplay.className = 'badge bg-primary';
+      valDisplay.innerText = v.currentValue.toFixed(2);
+      labelRow.appendChild(valDisplay);
+
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.className = 'form-range';
+      input.min = v.min;
+      input.max = v.max;
+      input.step = v.step;
+      input.value = v.currentValue;
+
+      input.addEventListener('input', (e) => {
+        v.currentValue = parseFloat(e.target.value);
+        valDisplay.innerText = v.currentValue.toFixed(2);
+        renderSvg();
+      });
+
+      cardBody.appendChild(input);
+    } else if (v.type === 'button') {
+      const btn = document.createElement('button');
+      btn.innerText = "Trigger";
+      btn.className = 'btn btn-outline-primary w-100';
+      btn.addEventListener('click', () => {
+        triggerAttackDecay(v);
+      });
+      cardBody.appendChild(btn);
+    }
+  });
+}
+
 function render() {
-  document.getElementById('output').innerHTML = editor.getValue()
+  const xml = editor.getValue();
+  const newVariables = parseVariables(xml);
+
+  // Merge with activeVariables to preserve state
+  newVariables.forEach(v => {
+    const existing = activeVariables.find(av => av.name === v.name);
+    if (existing) {
+      v.currentValue = existing.currentValue;
+    } else {
+      v.currentValue = v.value;
+    }
+  });
+  activeVariables = newVariables;
+
+  updateControls();
+  renderSvg();
 }
 
 editor.onDidChangeModelContent((event) => {
@@ -100,7 +223,8 @@ btnSave.addEventListener('click', function () {
   // TODO: Collect actual metadata from UI or other sources
   let metadata = {
     savedBy: 'editsvgcode',
-    version: '1.0'
+    version: '1.0',
+    variables: activeVariables
   };
 
   db.saveDocument(uniqueId, text, metadata)
@@ -150,7 +274,15 @@ document.addEventListener('dbinit', function () {
         editor.updateOptions({ readOnly: false })
       })
   } else {
-    editor.setValue(`<!-- sample rectangle -->\n<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">\n  <rect width="100" height="100" x="50" y="50" />\n</svg>`);
+    editor.setValue(`<!-- sample rectangle -->
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg" xmlns:editsvg="http://editsvgcode.com">
+  <editsvg:variable name="w" value="150" min="20" max="300" label="Width" />
+  <editsvg:variable name="h" value="150" min="20" max="300" label="Height" />
+  <editsvg:variable name="strk" value="5" min="5" max="30" type="button" attack="0.1" decay="0.8" label="Stroke Width" />
+  
+  <rect x="50" y="50" width="{w}" height="{h}" 
+        fill="#4285f4" stroke="#333" stroke-width="{strk}" rx="10" />
+</svg>`);
     editor.updateOptions({ readOnly: false })
   }
 })
